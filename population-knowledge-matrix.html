@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Population Knowledge Matrix — NGO Decision Support</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2128;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #7d8590;
+    --accent: #f0c040;
+    --accent2: #58a6ff;
+    --accent3: #3fb950;
+
+    --ENV: #4CAF50;
+    --HE:  #42a5f5;
+    --OPS: #ff7043;
+    --WS:  #26c6da;
+    --EVAL:#ab47bc;
+    --PP:  #ffa726;
+    --GEO: #78909c;
+    --LOG: #ec407a;
+    --POP: #f0c040;
+    --SAFE:#ef5350;
+    --SUP: #8d6e63;
+    --ACOM:#26a69a;
+    --LND: #7e57c2;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  /* ── HEADER ── */
+  header {
+    max-width: 1200px;
+    margin: 0 auto 2.5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+  }
+  .tag-line {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .7rem;
+    letter-spacing: .15em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: .5rem;
+  }
+  h1 {
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: .5rem;
+  }
+  h1 span { color: var(--accent); }
+  .subtitle {
+    color: var(--muted);
+    font-size: .88rem;
+    max-width: 680px;
+    line-height: 1.6;
+  }
+
+  /* ── LEGEND ── */
+  .legend {
+    max-width: 1200px;
+    margin: 0 auto 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: .25rem .6rem;
+    font-size: .72rem;
+    cursor: pointer;
+    transition: all .18s;
+    user-select: none;
+  }
+  .legend-item:hover { border-color: var(--accent); }
+  .legend-item.active { border-color: var(--accent); background: var(--surface2); }
+  .legend-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .legend-code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: .7rem;
+  }
+  .legend-label { color: var(--muted); }
+
+  /* ── MATRIX WRAPPER ── */
+  .matrix-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+    font-size: .8rem;
+  }
+
+  /* Header row */
+  thead th {
+    background: var(--surface2);
+    padding: .55rem .5rem;
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    border: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  thead th.scale-header {
+    text-align: left;
+    min-width: 130px;
+    font-size: .7rem;
+    color: var(--muted);
+  }
+  thead th.biz-header {
+    min-width: 72px;
+    cursor: pointer;
+    transition: color .18s;
+  }
+  thead th.biz-header:hover { color: var(--accent); }
+
+  /* Scale rows */
+  tbody tr { transition: background .15s; }
+  tbody tr:hover td { background: var(--surface2); }
+
+  td {
+    border: 1px solid var(--border);
+    padding: .4rem .5rem;
+    vertical-align: top;
+  }
+
+  td.scale-cell {
+    background: var(--surface);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .scale-name {
+    font-size: .78rem;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+  }
+  .scale-icon { font-size: 1rem; }
+  .scale-desc {
+    font-size: .65rem;
+    color: var(--muted);
+    margin-top: .2rem;
+    font-weight: 400;
+  }
+
+  /* Chips inside cells */
+  td.content-cell {
+    min-width: 72px;
+  }
+  .chips {
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+  }
+  .chip {
+    border-radius: 3px;
+    padding: .18rem .35rem;
+    font-size: .65rem;
+    line-height: 1.35;
+    opacity: 1;
+    transition: opacity .2s, transform .2s;
+    cursor: default;
+    position: relative;
+  }
+  .chip:hover { transform: scale(1.03); }
+  .chip-icon { margin-right: .2rem; }
+
+  /* Relevance dots */
+  .relevance {
+    display: flex;
+    gap: 2px;
+    margin-top: .15rem;
+  }
+  .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: currentColor;
+    opacity: .3;
+  }
+  .dot.filled { opacity: 1; }
+
+  /* Tooltip */
+  .chip { position: relative; }
+  .chip .tip {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 6px;
+    background: #222c38;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: .6rem .8rem;
+    width: 220px;
+    font-size: .7rem;
+    line-height: 1.5;
+    color: var(--text);
+    z-index: 100;
+    pointer-events: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,.5);
+  }
+  .chip:hover .tip { display: block; }
+  .tip-title {
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .68rem;
+    margin-bottom: .3rem;
+    color: var(--accent);
+  }
+  .tip-sample {
+    color: var(--muted);
+    font-style: italic;
+    margin-top: .3rem;
+    font-size: .66rem;
+  }
+
+  /* dim filter */
+  table.filtered .chip { opacity: .1; }
+  table.filtered .chip.visible { opacity: 1; }
+
+  /* ── SECTION: HOW TO READ ── */
+  .how-to {
+    max-width: 1200px;
+    margin: 2.5rem auto 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+  .how-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+  }
+  .how-card h3 {
+    font-size: .75rem;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--accent);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: .5rem;
+  }
+  .how-card p { font-size: .75rem; color: var(--muted); line-height: 1.55; }
+
+  /* ── FOOTER ── */
+  footer {
+    max-width: 1200px;
+    margin: 2.5rem auto 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .65rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .5rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="tag-line">NGO Decision Support Framework</div>
+  <h1>Population Knowledge <span>× Business Unit</span> Matrix</h1>
+  <p class="subtitle">
+    How estimation of population — at every geographic scale — drives decisions
+    across humanitarian business units. Click a business code to filter.
+  </p>
+</header>
+
+<!-- LEGEND -->
+<div class="legend" id="legend"></div>
+
+<!-- MATRIX -->
+<div class="matrix-wrap">
+<table id="matrix">
+<thead>
+  <tr>
+    <th class="scale-header">Scale</th>
+    <th class="biz-header" data-code="POP">POP</th>
+    <th class="biz-header" data-code="HE">HE</th>
+    <th class="biz-header" data-code="WS">WS</th>
+    <th class="biz-header" data-code="OPS">OPS</th>
+    <th class="biz-header" data-code="LOG">LOG</th>
+    <th class="biz-header" data-code="ENV">ENV</th>
+    <th class="biz-header" data-code="SAFE">SAFE</th>
+    <th class="biz-header" data-code="SUP">SUP</th>
+    <th class="biz-header" data-code="ACOM">ACOM</th>
+    <th class="biz-header" data-code="EVAL">EVAL</th>
+    <th class="biz-header" data-code="PP">PP</th>
+    <th class="biz-header" data-code="GEO">GEO</th>
+  </tr>
+</thead>
+<tbody id="tbody">
+</tbody>
+</table>
+</div>
+
+<!-- HOW TO READ -->
+<div class="how-to">
+  <div class="how-card">
+    <h3>🔍 How to filter</h3>
+    <p>Click any business code in the legend or column header to highlight only that unit's population uses across all geographic scales.</p>
+  </div>
+  <div class="how-card">
+    <h3>📌 Relevance dots</h3>
+    <p>Each chip shows ●●● dots indicating intensity of use: one dot = indicative, two = regular input, three = critical dependency.</p>
+  </div>
+  <div class="how-card">
+    <h3>💡 Hover for examples</h3>
+    <p>Hover any chip to reveal a concrete field example of how population data feeds that business unit at that scale.</p>
+  </div>
+  <div class="how-card">
+    <h3>🗺️ Scale logic</h3>
+    <p>Scales flow from global advocacy contexts down to individual camp tap-stand planning — each level unlocks different decisions.</p>
+  </div>
+</div>
+
+<footer>
+  <span>POP KNOWLEDGE × NGO BUSINESS UNITS — v1.0</span>
+  <span>ENV · HE · OPS · WS · EVAL · PP · GEO · LOG · SAFE · SUP · ACOM · LND · POP</span>
+</footer>
+
+<script>
+// ── DATA DEFINITIONS ──────────────────────────────────────────────────────────
+
+const BUSINESSES = [
+  { code:'POP',  label:'Population',               color:'#f0c040' },
+  { code:'HE',   label:'Health',                   color:'#42a5f5' },
+  { code:'WS',   label:'WATSAN',                   color:'#26c6da' },
+  { code:'OPS',  label:'Operations',               color:'#ff7043' },
+  { code:'LOG',  label:'Logistics',                color:'#ec407a' },
+  { code:'ENV',  label:'Environment/Planet.Health',color:'#4CAF50' },
+  { code:'SAFE', label:'Security & Safety',        color:'#ef5350' },
+  { code:'SUP',  label:'Supply',                   color:'#8d6e63' },
+  { code:'ACOM', label:'Advocacy & Communication', color:'#26a69a' },
+  { code:'EVAL', label:'Evaluations',              color:'#ab47bc' },
+  { code:'PP',   label:'Preparedness & Proj. Opt.',color:'#ffa726' },
+  { code:'GEO',  label:'Geographical Context',     color:'#78909c' },
+];
+
+// Chip: { label, relevance (1-3), example }
+// relevance: 1=indicative, 2=regular, 3=critical
+const SCALES = [
+  {
+    id:'global',
+    icon:'🌐',
+    name:'Global / Cross-Region',
+    desc:'Multi-country, worldwide trends',
+    cells: {
+      POP:  [{ label:'World pop. trends',  r:2, ex:'Track displacement volumes globally to size HQ workforce and budget envelopes (UNHCR, WorldPop).' },
+             { label:'Demographic models', r:1, ex:'Age-sex pyramids from UN DESA used to project future humanitarian caseloads.' }],
+      HE:   [{ label:'Global disease burden', r:2, ex:'WHO burden-of-disease estimates inform epidemic preparedness thresholds.' },
+             { label:'Vaccination coverage', r:2, ex:'Global EPI targets (e.g. ≥95% measles) set benchmarks for country-level campaigns.' }],
+      WS:   [{ label:'SDG 6 progress',    r:1, ex:'JMP access-to-safe-water indices signal regions where WATSAN scale-up is needed.' }],
+      OPS:  [{ label:'Global crises watch',r:2, ex:'ACAPS severity index + pop. at risk triggers multi-country emergency response activation.' }],
+      LOG:  [{ label:'Supply chain hubs',  r:1, ex:'Global population density maps guide pre-positioning of emergency stocks.' }],
+      ENV:  [{ label:'Climate vulnerability',r:2, ex:'Exposure indices (INFORM) combine pop. density with climate risk for early warning.' }],
+      SAFE: [{ label:'Global conflict map', r:1, ex:'ACLED + pop. density overlays flag areas where staff movement is restricted.' }],
+      SUP:  [{ label:'Global procurement', r:1, ex:'Aggregate beneficiary counts across missions set annual procurement frameworks.' }],
+      ACOM: [{ label:'Public advocacy',    r:3, ex:'"X million people lack safe water" — headline figures for donor campaigns and media.' }],
+      EVAL: [{ label:'Meta-analyses',      r:2, ex:'Cross-mission coverage surveys pooled to establish sector-wide baselines.' }],
+      PP:   [{ label:'Contingency plans',  r:2, ex:'Worst-case population scenarios (forced displacement) size pre-positioned resources.' }],
+      GEO:  [{ label:'Global grid pop.',   r:2, ex:'WorldPop / GPWv4 rasters underpin all subsequent geographic disaggregation.' }],
+    }
+  },
+  {
+    id:'country',
+    icon:'🗺️',
+    name:'Country',
+    desc:'National statistics & admin data',
+    cells: {
+      POP:  [{ label:'Census & projections', r:3, ex:'National census + UNFPA projections are the denominators for all country programmes.' },
+             { label:'Displacement tracking', r:3, ex:'DTM country reports estimate IDP/refugee populations by district for response sizing.' }],
+      HE:   [{ label:'National EPI data',    r:3, ex:'Routine immunisation records + census cohorts identify zero-dose children by governorate.' },
+             { label:'Mortality estimates',   r:2, ex:'Crude mortality rates from SMART surveys compared to national baselines to declare emergencies.' }],
+      WS:   [{ label:'National coverage %',  r:2, ex:'JMP/MICS water-access rates by country set the gap to bridge for programme design.' }],
+      OPS:  [{ label:'Population at risk',   r:3, ex:'Post-earthquake rapid estimate of affected population sizes the emergency response envelope.' }],
+      LOG:  [{ label:'Road network + pop.',  r:2, ex:'Population-weighted road accessibility index identifies supply corridors and last-mile gaps.' }],
+      ENV:  [{ label:'Env. health burden',   r:2, ex:'Country-level pollution/sanitation data linked to population to estimate DALYs averted.' }],
+      SAFE: [{ label:'Population movement',  r:2, ex:'Seasonal migration patterns guide security risk planning for field teams.' }],
+      SUP:  [{ label:'Beneficiary targets',  r:3, ex:'National beneficiary count determines quantities in the master procurement plan.' }],
+      ACOM: [{ label:'Country narrative',    r:2, ex:'Country-level affected-population figures fuel situation reports and donor sitreps.' }],
+      EVAL: [{ label:'Coverage surveys',     r:3, ex:'SMART nutrition or cluster surveys at country level assess programme reach vs total population.' }],
+      PP:   [{ label:'Scenario planning',    r:3, ex:'Population growth + hazard maps used to model scale of future crises for preparedness budgets.' }],
+      GEO:  [{ label:'Admin boundaries',     r:3, ex:'OCHA CODs + pop. by admin-1 enable country-level spatial analysis and resource allocation.' }],
+    }
+  },
+  {
+    id:'admin',
+    icon:'🏙️',
+    name:'Admin Division',
+    desc:'District / Province / Governorate',
+    cells: {
+      POP:  [{ label:'District population',  r:3, ex:'Sub-national census disaggregation pinpoints districts with highest unmet need.' }],
+      HE:   [{ label:'EPI district targets', r:3, ex:'District-level birth cohort (live births per year) sizes vaccine quantities needed per zone.' },
+             { label:'Epi surveillance',     r:2, ex:'Disease incidence rates by district trigger mobile response team deployment.' }],
+      WS:   [{ label:'Coverage gap by district',r:2, ex:'% of households without safe water by admin-2 prioritises WATSAN intervention zones.' }],
+      OPS:  [{ label:'Affected pop. by zone', r:3, ex:'Post-flood district affected-population estimate drives distribution point planning.' }],
+      LOG:  [{ label:'Dispatch planning',    r:2, ex:'Population density per district allocates truck routes and delivery frequencies.' }],
+      ENV:  [{ label:'Pollution hotspots',   r:1, ex:'Air/water quality data weighted by district population quantifies exposure burden.' }],
+      SAFE: [{ label:'Incident density',     r:2, ex:'Security incidents per 100k population by district classify access constraints.' }],
+      SUP:  [{ label:'Stock pre-positioning',r:2, ex:'District population + vulnerability score drives pre-positioned NFI quantities.' }],
+      ACOM: [{ label:'Local media targeting',r:1, ex:'District population size and literacy rates shape communication channel selection.' }],
+      EVAL: [{ label:'Sampling frame',       r:3, ex:'District population lists serve as the sampling frame for cluster household surveys.' }],
+      PP:   [{ label:'Response planning',    r:2, ex:'District hazard × population exposure index ranks priority zones for contingency plans.' }],
+      GEO:  [{ label:'Admin-2 mapping',      r:3, ex:'District boundaries + pop. centroids enable choropleth mapping for decision briefs.' }],
+    }
+  },
+  {
+    id:'community',
+    icon:'🏘️',
+    name:'Community / Village',
+    desc:'Village, neighbourhood, catchment area',
+    cells: {
+      POP:  [{ label:'Community headcount',  r:3, ex:'Community enumeration (key informant or census) establishes beneficiary denominator.' },
+             { label:'Age-sex breakdown',    r:3, ex:'Under-5, elderly, and PLW disaggregation identifies vulnerable sub-groups for targeting.' }],
+      HE:   [{ label:'Vaccination targets',  r:3, ex:'Village under-1 cohort determines vials needed per outreach session (EPI micro-plan).' },
+             { label:'Community-based surv.',r:2, ex:'Community health workers track births/deaths to maintain a living population register.' }],
+      WS:   [{ label:'People affected/served',r:3, ex:'Number of people without water after a road blockage sizes tankering or emergency trucking need.' },
+             { label:'Event impact (EQ/flood)',r:3, ex:'How many people affected by earthquake or landslide? Drives WASH NFI and hygiene kit quantities.' }],
+      OPS:  [{ label:'Distribution planning', r:3, ex:'Community headcount × entitlement = total items to dispatch per distribution point.' }],
+      LOG:  [{ label:'Access analysis',      r:2, ex:'Population size vs road condition scores communities for last-mile delivery priority.' }],
+      ENV:  [{ label:'Local env. health',    r:2, ex:'Number of people exposed to contaminated water source quantifies intervention urgency.' }],
+      SAFE: [{ label:'Community risk profile',r:2, ex:'Population density + conflict proximity flags communities requiring security escorts.' }],
+      SUP:  [{ label:'Kit quantities',       r:3, ex:'Family size distribution shapes NFI kit composition (blankets, jerry cans per household).' }],
+      ACOM: [{ label:'Community messaging',  r:2, ex:'Literacy rates and language breakdown guide IEC material design and megaphone messaging.' }],
+      EVAL: [{ label:'Household surveys',    r:2, ex:'Population register enables random-sample household survey with correct inclusion probabilities.' }],
+      PP:   [{ label:'Community risk maps',  r:2, ex:'Population × hazard exposure drives community-level DRR preparedness prioritisation.' }],
+      GEO:  [{ label:'Village mapping',      r:2, ex:'GPS-located community centroids + population linked to service-delivery mapping.' }],
+    }
+  },
+  {
+    id:'camp',
+    icon:'⛺',
+    name:'Camp / Displacement Site',
+    desc:'IDP camp, collective centre, settlement',
+    cells: {
+      POP:  [{ label:'Camp census / registration',r:3, ex:'UNHCR/DTM registration database is the single source of truth for individual entitlements.' },
+             { label:'New arrivals tracking', r:3, ex:'Daily arrival/departure log maintains real-time population figure for service calibration.' }],
+      HE:   [{ label:'EPI camp baseline',    r:3, ex:'Registered under-1 cohort determines vaccine cold-chain capacity and outreach schedule.' },
+             { label:'Morbidity surveillance',r:3, ex:'Weekly morbidity rates per 10k population trigger alert thresholds for epidemic response.' }],
+      WS:   [{ label:'People per tap-stand', r:3, ex:'Sphere standard: ≤250 persons/tap. Camp population ÷ tap-stands = compliance check.' },
+             { label:'Latrine coverage',     r:3, ex:'Camp population ÷ latrines checks Sphere (≤20 persons/toilet) and guides construction.' }],
+      OPS:  [{ label:'Ration/NFI planning',  r:3, ex:'Camp headcount on distribution day sets total ration packs and NFI quantities to dispatch.' }],
+      LOG:  [{ label:'Site logistics',       r:2, ex:'Population density map of camp blocks guides truck route and unloading point design.' }],
+      ENV:  [{ label:'Solid waste loads',    r:2, ex:'Population size × waste generation rate (kg/person/day) sizes waste collection capacity.' }],
+      SAFE: [{ label:'Crowd management',     r:2, ex:'Population density per block identifies hotspots for security presence and riot risk.' }],
+      SUP:  [{ label:'Consumption tracking', r:3, ex:'Camp population × daily ration = weekly food commodity request to supply chain.' }],
+      ACOM: [{ label:'Rumour tracking',      r:1, ex:'Known camp population size calibrates feedback-mechanism reach and megaphone coverage.' }],
+      EVAL: [{ label:'PDM surveys',          r:3, ex:'Post-distribution monitoring uses registration list as sampling frame for recall surveys.' }],
+      PP:   [{ label:'Contingency capacity', r:2, ex:'Projected camp population growth scenarios size latent capacity (space, water, health posts).' }],
+      GEO:  [{ label:'Site layout mapping',  r:3, ex:'Block-level population density overlaid on camp map guides service-point siting decisions.' }],
+    }
+  },
+];
+
+// ── RENDER LEGEND ─────────────────────────────────────────────────────────────
+const legendEl = document.getElementById('legend');
+BUSINESSES.forEach(b => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  item.dataset.code = b.code;
+  item.innerHTML = `
+    <span class="legend-dot" style="background:${b.color}"></span>
+    <span class="legend-code" style="color:${b.color}">${b.code}</span>
+    <span class="legend-label">${b.label}</span>`;
+  legendEl.appendChild(item);
+});
+
+// ── RENDER TABLE ──────────────────────────────────────────────────────────────
+const codes = BUSINESSES.map(b => b.code);
+const colorMap = Object.fromEntries(BUSINESSES.map(b => [b.code, b.color]));
+
+function dots(r) {
+  return [1,2,3].map(i =>
+    `<span class="dot ${i<=r?'filled':''}" style="color:currentColor"></span>`
+  ).join('');
+}
+
+const tbody = document.getElementById('tbody');
+SCALES.forEach(scale => {
+  const tr = document.createElement('tr');
+
+  // Scale label cell
+  const th = document.createElement('td');
+  th.className = 'scale-cell';
+  th.innerHTML = `
+    <div class="scale-name"><span class="scale-icon">${scale.icon}</span>${scale.name}</div>
+    <div class="scale-desc">${scale.desc}</div>`;
+  tr.appendChild(th);
+
+  // Business cells
+  codes.forEach(code => {
+    const td = document.createElement('td');
+    td.className = 'content-cell';
+    const chips_data = scale.cells[code] || [];
+    if (chips_data.length === 0) {
+      td.innerHTML = `<span style="color:var(--border);font-size:.65rem">—</span>`;
+    } else {
+      const div = document.createElement('div');
+      div.className = 'chips';
+      chips_data.forEach(c => {
+        const chip = document.createElement('div');
+        chip.className = `chip`;
+        chip.dataset.code = code;
+        chip.style.background = colorMap[code] + '22';
+        chip.style.borderLeft = `3px solid ${colorMap[code]}`;
+        chip.style.color = colorMap[code];
+        chip.innerHTML = `
+          <span class="chip-icon"></span>${c.label}
+          <div class="relevance">${dots(c.r)}</div>
+          <div class="tip">
+            <div class="tip-title">${code} @ ${scale.name}</div>
+            ${c.ex}
+            <div class="tip-sample">Relevance: ${'●'.repeat(c.r)}${'○'.repeat(3-c.r)}</div>
+          </div>`;
+        div.appendChild(chip);
+      });
+      td.appendChild(div);
+    }
+    tr.appendChild(td);
+  });
+
+  tbody.appendChild(tr);
+});
+
+// ── FILTER LOGIC ──────────────────────────────────────────────────────────────
+let activeCode = null;
+
+function applyFilter(code) {
+  const table = document.getElementById('matrix');
+  const allChips = table.querySelectorAll('.chip');
+  const allLegendItems = document.querySelectorAll('.legend-item');
+  const allHeaders = document.querySelectorAll('.biz-header');
+
+  if (!code || activeCode === code) {
+    // clear
+    activeCode = null;
+    table.classList.remove('filtered');
+    allChips.forEach(c => c.classList.remove('visible'));
+    allLegendItems.forEach(l => l.classList.remove('active'));
+    allHeaders.forEach(h => h.style.color = '');
+  } else {
+    activeCode = code;
+    table.classList.add('filtered');
+    allChips.forEach(c => {
+      c.classList.toggle('visible', c.dataset.code === code);
+    });
+    allLegendItems.forEach(l => {
+      l.classList.toggle('active', l.dataset.code === code);
+    });
+    allHeaders.forEach(h => {
+      h.style.color = h.dataset.code === code ? colorMap[code] : '';
+    });
+  }
+}
+
+document.querySelectorAll('.legend-item').forEach(el => {
+  el.addEventListener('click', () => applyFilter(el.dataset.code));
+});
+document.querySelectorAll('.biz-header').forEach(el => {
+  el.addEventListener('click', () => applyFilter(el.dataset.code));
+});
+</script>
+</body>
+</html>
